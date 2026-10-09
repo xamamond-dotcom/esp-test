@@ -772,7 +772,52 @@ end)
 header.InputEnded:Connect(function(input)
     if input.UserInputType ~= Enum.UserInputType.MouseButton1
     and input.UserInputType ~= Enum.UserInputType.Touch then return end
-    
+
     local duration = tick() - tapState.startTime
     if not tapState.moved and duration < 0.5 then
-        if isExpanded then collapse()
+        if isExpanded then collapse() else expand() end
+    end
+    tapState.startPos = nil
+end)
+
+-- Make it draggable from header
+local dragStart, startPos
+header.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
+        dragStart = input.Position
+        startPos = main.Position
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragStart and (input.UserInputType == Enum.UserInputType.MouseMovement
+    or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        main.Position = UDim2.new(
+            startPos.X.Scale, startPos.X.Offset + delta.X,
+            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
+        dragStart = nil
+    end
+end)
+
+--// ============ PUBLIC API ============
+getgenv().ESP_CONFIG = CONFIG
+getgenv().ESP_TOGGLE = function(state)
+    CONFIG.Enabled = (state == nil) and not CONFIG.Enabled or state
+    statusPill.Text = CONFIG.Enabled and "ON" or "OFF"
+    statusPill.BackgroundColor3 = CONFIG.Enabled
+        and Color3.fromRGB(0, 200, 100)
+        or Color3.fromRGB(180, 50, 50)
+    return CONFIG.Enabled
+end
+getgenv().ESP_DESTROY = fullCleanup
+
+print("[ESP] Ready. Loaded on " .. (IS_MOBILE and "mobile" or "PC"))
